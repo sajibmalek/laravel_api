@@ -36,29 +36,37 @@ class UserController extends Controller
 
     }
 
-    function UserLogin(Request $request)
+    function UserLogin(Request $request):string
     {
-
-        $userCount = User::where('email', '=', $request->input('email'))
-            ->where('password', '=', $request->input('password'))
-            ->count();
-        if ($userCount == 1) {
-            $token = JWTToken::CreateToken($request->input('email'));
-            return response()->json([
-                "status" => "success",
-                "message" => "User login success",
-                "token" => $token
-            ]);
-        } else {
+        try {
+            $userCount = User::where('email', '=', $request->input('email'))
+                ->where('password', '=', $request->input('password'))
+                ->count();
+            if ($userCount == 1) {
+                $token = JWTToken::CreateToken($request->input('email'));
+                return response()->json([
+                    "status" => "success",
+                    "message" => "User login success",
+                    "token" => $token
+                ],200);
+            } else {
+                return response()->json([
+                    "status" => "failed",
+                    "message" => "unauthorized"
+                ],401);
+            }
+        }catch (Exception $e){
             return response()->json([
                 "status" => "failed",
-                "message" => "unauthorized"
-            ]);
+                "message" => "Something went wrong"
+            ],404);
         }
+
+
 
     }
 
-    function EmailVerify(Request $request)
+    function EmailVerify(Request $request):string
     {
 
         try {
@@ -83,9 +91,62 @@ class UserController extends Controller
             return response()->json([
                 "status" => "failed",
                 "message" => "Something went wrong"
+            ],404);
+        }
+
+
+    }
+
+    function VerifyOTP(Request $request):string{
+
+        try {
+            $email = $request->input('email');
+            $otp = $request->input('top');
+            $count= User::where('email', '=', $email)
+                ->where('top', '=', $otp)->count();
+            if($count==1){
+                User::where('email', '=', $email)->update(['top' => '0']);
+
+                $token = JWTToken::CreateVerifyOTP($request->input('email'));
+                return response()->json([
+                    "status" => "success",
+                    "message" => "OTP Verify successfully",
+                    "token" => $token
+                ]);
+            }
+            else{
+                return response()->json([
+                    "status" => "failed",
+                    "message" => "Invalid OTP"
+                ]);
+            }
+        }catch (Exception $e){
+            return response()->json([
+                "status" => "failed",
+                "message" => "Something went wrong"
+
             ]);
         }
 
+
+    }
+
+    function ResetPassword(Request $request):string{
+        try {
+            $email = $request->header('email');
+            $password = $request->header('password');
+            User::where('email', '=', $email)->update(['password' => $password]);
+
+            return response()->json([
+                "status" => "success",
+                "message" => "Password reset successfully"
+            ]);
+        }catch (Exception $exception){
+            return response()->json([
+                "status" => "failed",
+                "message" => "Something went wrong"
+            ]);
+        }
 
     }
 }
